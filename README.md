@@ -26,7 +26,7 @@ Although we previously worked with basic HTML scraping in rvest and simple API r
 While variables such as GDP per capita, population size, and health expenditure are  indicators of Olympic success, their predictive power may be limited. Our challenge for this project is to learn some additional machine learning algorithms that we could use, run different machine learning models, and compare them with basic ones or the ones that we learned in class in order to improve predictive accuracy.
 
 # Datasets
-Dataset 1: Olympic Medal Tables
+**Dataset 1: Olympic Medal Tables**
 
 Source:
 https://en.wikipedia.org/wiki/Category:Summer_Olympics_medal_tables and https://en.wikipedia.org/wiki/Category:Winter_Olympics_medal_tables
@@ -54,7 +54,7 @@ Last 10 Summer Olympic Games and Last 10 Winter Olympic Games (1988–2026).
 Spatial coverage:
 All countries participating in the Summer and Winter Olympic Games.
 
-Dataset 2: World Bank Economic Indicators
+**Dataset 2: World Bank Economic Indicators**
 
 Source:
 https://data.worldbank.org
