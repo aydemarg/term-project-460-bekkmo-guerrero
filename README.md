@@ -21,7 +21,7 @@ The goal is to understand how well economic and demographic factors can predict 
 
 # Challenge
 
-Although we previously worked with basic HTML scraping in rvest and simple API requests using httr, our challenge for this project is to use a more advanced data collection workflow. We plan to retrieve country-level indicators through the World Bank API using httr2, including multiple variables and years, and combine those data with Olympic medal tables collected from the web.
+Building on the web scraping techniques learned in class, we will collect data using multiple approaches. We will extract data from HTML tables using rvest, retrieve API data using httr, and process JSON responses with jsonlite. These methods will allow us to combine structured data from APIs with information gathered directly from web pages for our analysis.
 
 While variables such as GDP per capita, population size, and health expenditure are  indicators of Olympic success, their predictive power may be limited. Our challenge for this project is to learn some additional machine learning algorithms that we could use, run different machine learning models, and compare them with basic ones or the ones that we learned in class in order to improve predictive accuracy.
 
