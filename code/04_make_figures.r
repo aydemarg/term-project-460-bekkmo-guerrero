@@ -393,7 +393,11 @@ p15 = ggplot(medals_long_counts, aes(fill = medal, values = count)) +
   ) +
   theme_minimal() +
   labs(title = "Olympic Medal Composition by Country",
-       caption = "For Top 10 Countries in Total Medal Count")
+       subtitle = "1 square = 1 medal",
+       caption = "For Top 10 Countries in Total Medal Count") +
+  theme(plot.caption = element_text(hjust = 0.5),
+        plot.title = element_text(hjust = 0.5) ,
+        plot.subtitle = element_text(hjust = 0.5) )
 
 ggsave("output/figures/fig15_top10_medal_comp.png", plot = p15, width = 8, height = 5, dpi = 300)
 
