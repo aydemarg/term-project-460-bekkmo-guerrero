@@ -678,9 +678,6 @@ ggplot(top_overperformers,
 
 ```{r visualization4}
 olympics_viz_clean |>
-  select(country, medals_per_million) |>
-  arrange(desc(medals_per_million)) |>
-  
   ggplot(aes(x = total, y = log_gdp)) +
   geom_rug(color = "steelblue") +
   geom_point(color = "steelblue", alpha = 0.6) +
