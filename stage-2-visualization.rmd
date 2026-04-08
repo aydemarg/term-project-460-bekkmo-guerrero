@@ -11,6 +11,15 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+#Install nedeed packages
+#install.packages("rnaturalearth")
+#install.packages("sf")
+#install.packages("viridis")
+#install.packages("rnaturalearthdata")
+
+```
+
 ```{r load-packages}
 #| include = FALSE
 
@@ -25,6 +34,12 @@ library(purrr)
 library(stringr)
 library(janitor)
 library(readr)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(viridis)
+library(grid)
+library(RColorBrewer)
 ```
 
 ```{r olympics-data}
@@ -379,12 +394,13 @@ summary(olympics_final$year)
 ```
 
 
+
 ```{r}
 #-----------------------------------------
 # Data set improved for visualization
 #-----------------------------------------
 
-#Check raw data
+#Check raw data plots
 
 #Medals Distribution
 ggplot(olympics_final, aes(x = total)) +
@@ -416,6 +432,9 @@ ggplot(olympics_final, aes(x = population_total)) +
   ) +
   theme_minimal()
 
+#--------------------------
+#Data log Transformation
+#--------------------------
 #Normalizing to improve is right skewed - Log transformation
 olympics_viz <- olympics_final %>%
   mutate(
@@ -423,9 +442,19 @@ olympics_viz <- olympics_final %>%
     log_gdp = log(gdp_per_capita_ppp),
     log_population = log(population_total)
   )
+
+#removing NAs since log can't have zeros
+olympics_viz_clean <- olympics_viz %>%
+  filter(
+    !is.na(log_population),
+    !is.na(medals_per_million),
+    is.finite(log_population),
+    is.finite(medals_per_million)
+  )
+
 #Plots after transformation
 #Medals Distribution 
-ggplot(olympics_viz, aes(x = medals_per_million)) +
+ggplot(olympics_viz_clean, aes(x = medals_per_million)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   coord_cartesian(xlim = c(0, 10)) +
   labs(
@@ -436,7 +465,7 @@ ggplot(olympics_viz, aes(x = medals_per_million)) +
   theme_minimal()
 
 #GDP per capital
-ggplot(olympics_viz, aes(x = log_gdp)) +
+ggplot(olympics_viz_clean, aes(x = log_gdp)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   labs(
     title = "Log-Transformed GDP per Capita Distribution",
@@ -446,7 +475,7 @@ ggplot(olympics_viz, aes(x = log_gdp)) +
   theme_minimal()
 
 #Population
-ggplot(olympics_viz, aes(x = log_population)) +
+ggplot(olympics_viz_clean, aes(x = log_population)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
   labs(
     title = "Log-Transformed Population Distribution",
@@ -458,7 +487,7 @@ ggplot(olympics_viz, aes(x = log_population)) +
 #Understand relationships between variables
 
 #relationship between GDP and Medals
-ggplot(olympics_viz, aes(x = log_gdp, y = medals_per_million)) +
+ggplot(olympics_viz_clean, aes(x = log_gdp, y = medals_per_million)) +
   geom_point(alpha = 0.4) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(
@@ -469,7 +498,7 @@ ggplot(olympics_viz, aes(x = log_gdp, y = medals_per_million)) +
   theme_minimal()
 
 #relationship 
-ggplot(olympics_viz, aes(x = log_population, y = medals_per_million)) +
+ggplot(olympics_viz_clean, aes(x = log_population, y = medals_per_million)) +
   geom_point(alpha = 0.4) +
   geom_smooth(method = "lm", se = FALSE) +
   labs(
@@ -478,5 +507,164 @@ ggplot(olympics_viz, aes(x = log_population, y = medals_per_million)) +
     y = "Medals per Million"
   ) +
   theme_minimal()
+
+# GDP vs medals per million (binned median trend)
+ggplot(olympics_viz_clean, aes(x = log_gdp, y = medals_per_million)) +
+  geom_point(alpha = 0.12) +
+  geom_smooth(se = FALSE, linewidth = 1.2, color = "steelblue")+
+  coord_cartesian(ylim = c(0, 5)) +
+  labs(
+    title = "Relationship Between GDP per Capita and Medals per Million",
+    x = "Log GDP per Capita",
+    y = "Medals per Million"
+  ) +
+  theme_minimal()
+
+#Total medals over time for a topmajor countries
+top_countries_total <- olympics_final %>%
+  group_by(country) %>%
+  summarise(total_medals_all_years = sum(total, na.rm = TRUE)) %>%
+  slice_max(total_medals_all_years, n = 10)
+
+ggplot(top_countries_total,
+       aes(x = reorder(country, total_medals_all_years),
+           y = total_medals_all_years)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Countries by Total Olympic Medals",
+    x = NULL,
+    y = "Total Medals"
+  ) +
+  theme_minimal()
+
+
+
+```
+```{r}
+#Choropleth world map with a sequential color scale
+# -----------------------------------
+# Aggregate Olympic medals by country
+# -----------------------------------
+
+medals_map <- olympics_final %>%
+  group_by(country) %>%
+  summarise(total_medals = sum(total, na.rm = TRUE))
+
+# -----------------------------------
+# Get world map data
+# -----------------------------------
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+# -----------------------------------
+# Fix country names to improve matching
+# -----------------------------------
+
+medals_map <- medals_map %>%
+  mutate(
+    country = case_when(
+      country == "United States" ~ "United States of America",
+      country == "Russia" ~ "Russian Federation",
+      country == "South Korea" ~ "Republic of Korea",
+      country == "North Korea" ~ "Dem. Rep. Korea",
+      country == "Iran" ~ "Iran",
+      country == "Venezuela" ~ "Venezuela",
+      country == "Czech Republic" ~ "Czechia",
+      country == "Slovakia" ~ "Slovakia",
+      country == "Moldova" ~ "Moldova",
+      country == "Syria" ~ "Syria",
+      country == "Bolivia" ~ "Bolivia",
+      country == "Tanzania" ~ "Tanzania",
+      country == "Laos" ~ "Laos",
+      country == "Vietnam" ~ "Vietnam",
+      country == "Brunei" ~ "Brunei",
+      country == "Cape Verde" ~ "Cabo Verde",
+      country == "Ivory Coast" ~ "Côte d'Ivoire",
+      country == "Macedonia" ~ "North Macedonia",
+      country == "Dem. Rep. Korea" ~ "North Korea",
+      country == "Republic of Korea" ~ "South Korea",
+      country == "Russian Federation" ~ "Russia",
+      country == "Chinese Taipei" ~ "Taiwan",
+      TRUE ~ country
+    )
+  )
+
+#Adding medals to Russia when competed with different team names
+medals_map_clean <- medals_map %>%
+  mutate(
+    country = case_when(
+      country %in% c("Russian Federation", "ROC", "Olympic Athletes from Russia") ~ "Russia",
+      country == "Cape Verde" ~ "Cabo Verde",
+      country == "Ivory Coast" ~ "Côte d'Ivoire",
+      country == "Macedonia" ~ "North Macedonia",
+      country == "Republic of Korea" ~ "South Korea",
+      country == "Dem. Rep. Korea" ~ "North Korea",
+      country == "Chinese Taipei" ~ "Taiwan",
+      TRUE ~ country
+    )
+  ) %>%
+  filter(!country %in% c(
+    "Czechoslovakia",
+    "FR Yugoslavia",
+    "Independent Olympic Athletes",
+    "Independent Olympic Participants",
+    "Individual Neutral Athletes",
+    "Refugee Olympic Team",
+    "Serbia and Montenegro",
+    "Unified Team"
+  )) %>%
+  group_by(country) %>%
+  summarise(total_medals = sum(total_medals, na.rm = TRUE), .groups = "drop")
+# -----------------------------------
+# Join map with medal data
+# -----------------------------------
+
+world_medals <- world %>%
+  left_join(medals_map_clean, by = c("name" = "country"))
+
+# -----------------------------------
+# Plot
+# -----------------------------------
+
+ggplot(world_medals) +
+  geom_sf(aes(fill = total_medals), color = "white", linewidth = 0.2) +
+  scale_fill_distiller(
+  palette = "YlGnBu",
+  direction = 1,
+  trans = "sqrt",
+  na.value = "gray90",
+  name = "Total medals",
+  breaks = seq(200, 1200, by = 200)
+) +
+  guides(
+    fill = guide_colorbar(
+      direction = "horizontal",
+      title.position = "left",
+      title.hjust = 0.5,
+      barwidth = unit(12, "cm"),
+      barheight = unit(0.7, "cm")
+    )
+  ) +
+  labs(
+    title = "Olympic Medal Totals Across Participating Countries",
+    subtitle = "Data covers Olympic Games from 1996 to 2024 \nCountries in gray do not appear in the dataset",
+    caption = "Lighter colors indicate lower total medal counts"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 20),
+    plot.subtitle = element_text(hjust = 0.5),
+    plot.caption = element_text(hjust = 0.5),
+    axis.text = element_blank(),
+    axis.title = element_blank(),
+    panel.grid = element_blank(),
+    legend.position = "bottom",
+    legend.title = element_text(face = "bold", size = 12),
+    legend.text = element_text(size = 10)
+  )
+```
+```{r}
+
 ```
 
