@@ -11,15 +11,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-```{r}
-#Install nedeed packages
-#install.packages("rnaturalearth")
-#install.packages("sf")
-#install.packages("viridis")
-#install.packages("rnaturalearthdata")
-
-```
-
 ```{r load-packages}
 #| include = FALSE
 
@@ -40,6 +31,11 @@ library(rnaturalearthdata)
 library(viridis)
 library(grid)
 library(RColorBrewer)
+library(scales)
+
+#install.packages("remotes")
+#remotes::install_github("hrbrmstr/waffle")
+library(waffle)
 ```
 
 ```{r olympics-data}
@@ -208,7 +204,9 @@ olympics_all %>%
 ```
 
 ```{r world-bank-data}
-# Web Scraping World Bank Data
+#-----------------------------------
+#World Bank Data
+#------------------------------------
 
 # Define API request
 get_wb_indicator <- function(indicator, var_name) {
@@ -298,10 +296,8 @@ indicators <- c(
   fdi_inflow = "BX.KLT.DINV.CD.WD",
   fdi_outflow = "BM.KLT.DINV.CD.WD",
   portfolio_inflow = "BX.PEF.TOTL.CD.WD",
-  remittances = "BX.TRF.PWKR.CD.DT",
 
   # finance
-  domestic_credit = "FS.AST.DOMS.GD.ZS",
   private_credit = "FS.AST.PRVT.GD.ZS",
   broad_money = "FM.LBL.BMNY.GD.ZS",
   money_growth = "FM.LBL.BMNY.ZG",
@@ -357,7 +353,7 @@ indicators_final <- reduce(indicators_list, left_join, by = c("country", "year")
 olympics_indicators <- left_join(olympics_all, indicators_final, by = c("country", "year"))
 ```
 
-```{r}
+```{r data-cleaning}
 #----------------------------
 # Cleaning Data Set
 #---------------------------
@@ -388,14 +384,9 @@ olympics_final <- olympics_indicators %>%
 
 #Check how many years were kept
 summary(olympics_final$year)
-
-
-
 ```
 
-
-
-```{r}
+```{r visualization1}
 #-----------------------------------------
 # Data set improved for visualization
 #-----------------------------------------
@@ -537,19 +528,10 @@ ggplot(top_countries_total,
     y = "Total Medals"
   ) +
   theme_minimal()
-
-
-
 ```
-```{r}
-#Choropleth world map with a sequential color scale
-# -----------------------------------
-# Aggregate Olympic medals by country
-# -----------------------------------
 
-medals_map <- olympics_final %>%
-  group_by(country) %>%
-  summarise(total_medals = sum(total, na.rm = TRUE))
+```{r visualization2}
+#Choropleth world map with a sequential color scale
 
 # -----------------------------------
 # Get world map data
@@ -558,49 +540,37 @@ medals_map <- olympics_final %>%
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
 # -----------------------------------
-# Fix country names to improve matching
+# Aggregate Olympic medals by country and Fix country names to improve matching
 # -----------------------------------
 
-medals_map <- medals_map %>%
+medals_map_clean <- olympics_final %>%
+  group_by(country, season) %>%
+  summarise(total_medals = sum(total, na.rm = TRUE), .groups = "drop") %>%
   mutate(
     country = case_when(
       country == "United States" ~ "United States of America",
       country == "Russia" ~ "Russian Federation",
-      country == "South Korea" ~ "Republic of Korea",
-      country == "North Korea" ~ "Dem. Rep. Korea",
-      country == "Iran" ~ "Iran",
-      country == "Venezuela" ~ "Venezuela",
+      #country == "South Korea" ~ "Republic of Korea",
+      country == "Republic of Korea" ~ "South Korea",
+      #country == "North Korea" ~ "Dem. Rep. Korea",
+      country == "Dem. Rep. Korea" ~ "North Korea",
+      #country == "Iran" ~ "Iran",
+      #country == "Venezuela" ~ "Venezuela",
       country == "Czech Republic" ~ "Czechia",
-      country == "Slovakia" ~ "Slovakia",
-      country == "Moldova" ~ "Moldova",
-      country == "Syria" ~ "Syria",
-      country == "Bolivia" ~ "Bolivia",
-      country == "Tanzania" ~ "Tanzania",
-      country == "Laos" ~ "Laos",
-      country == "Vietnam" ~ "Vietnam",
-      country == "Brunei" ~ "Brunei",
+      #country == "Slovakia" ~ "Slovakia",
+      #country == "Moldova" ~ "Moldova",
+      #country == "Syria" ~ "Syria",
+      #country == "Bolivia" ~ "Bolivia",
+      #country == "Tanzania" ~ "Tanzania",
+      #country == "Laos" ~ "Laos",
+      #country == "Vietnam" ~ "Vietnam",
+      #country == "Brunei" ~ "Brunei",
       country == "Cape Verde" ~ "Cabo Verde",
       country == "Ivory Coast" ~ "Côte d'Ivoire",
       country == "Macedonia" ~ "North Macedonia",
-      country == "Dem. Rep. Korea" ~ "North Korea",
-      country == "Republic of Korea" ~ "South Korea",
-      country == "Russian Federation" ~ "Russia",
       country == "Chinese Taipei" ~ "Taiwan",
-      TRUE ~ country
-    )
-  )
-
-#Adding medals to Russia when competed with different team names
-medals_map_clean <- medals_map %>%
-  mutate(
-    country = case_when(
+      #Adding medals to Russia when competed with different team names
       country %in% c("Russian Federation", "ROC", "Olympic Athletes from Russia") ~ "Russia",
-      country == "Cape Verde" ~ "Cabo Verde",
-      country == "Ivory Coast" ~ "Côte d'Ivoire",
-      country == "Macedonia" ~ "North Macedonia",
-      country == "Republic of Korea" ~ "South Korea",
-      country == "Dem. Rep. Korea" ~ "North Korea",
-      country == "Chinese Taipei" ~ "Taiwan",
       TRUE ~ country
     )
   ) %>%
@@ -613,15 +583,24 @@ medals_map_clean <- medals_map %>%
     "Refugee Olympic Team",
     "Serbia and Montenegro",
     "Unified Team"
-  )) %>%
-  group_by(country) %>%
-  summarise(total_medals = sum(total_medals, na.rm = TRUE), .groups = "drop")
+  ))
+
+# -----------------------------------
+# Ensure all countries exist for both seasons
+# -----------------------------------
+
+medals_map_complete <- medals_map_clean %>%
+  tidyr::complete(
+    country = unique(world$name),
+    season = c("Summer", "Winter")
+  )
+
 # -----------------------------------
 # Join map with medal data
 # -----------------------------------
 
 world_medals <- world %>%
-  left_join(medals_map_clean, by = c("name" = "country"))
+  left_join(medals_map_complete, by = c("name" = "country"))
 
 # -----------------------------------
 # Plot
@@ -662,9 +641,136 @@ ggplot(world_medals) +
     legend.position = "bottom",
     legend.title = element_text(face = "bold", size = 12),
     legend.text = element_text(size = 10)
+  ) +
+  facet_wrap(~season)
+```
+
+```{r visualization3}
+model <- lm(medals_per_million ~ log_gdp, data = olympics_viz_clean)
+
+olympics_model <- olympics_viz_clean %>%
+  mutate(
+    expected = predict(model, newdata = olympics_viz_clean),
+    residual = medals_per_million - expected
   )
-```
-```{r}
 
+top_overperformers <- olympics_model %>%
+  group_by(country) %>%
+  summarise(avg_residual = mean(residual, na.rm = TRUE)) %>%
+  slice_max(avg_residual, n = 10)
+
+ggplot(top_overperformers,
+       aes(x = reorder(country, avg_residual), y = avg_residual)) +
+  geom_col(fill = "steelblue") +
+  coord_flip() +
+  labs(
+    title = "Countries That Overperform in Olympic Success",
+    subtitle = "Relative to GDP per capita expectations",
+    x = NULL,
+    y = "Average Overperformance (Residual)"
+  ) +
+  theme_minimal()
 ```
 
+```{r visualization4}
+olympics_viz_clean |>
+  select(country, medals_per_million) |>
+  arrange(desc(medals_per_million)) |>
+  
+  ggplot(aes(x = total, y = log_gdp)) +
+  geom_rug(color = "steelblue") +
+  geom_point(color = "steelblue", alpha = 0.6) +
+  labs(
+    title = "Distribution of Log GDP per Capita by Olympic Success Level",
+    x = "Total Medals",
+    y = "Log GDP per Capita"
+  ) +
+  theme_minimal() +
+  facet_wrap(~season)
+```
+
+```{r visualization5}
+medals_long <- olympics_viz_clean %>%
+  select(country, year, log_gdp, gold, silver, bronze) %>%
+  pivot_longer(
+    cols = c(gold, silver, bronze),
+    names_to = "medal_type",
+    values_to = "medals"
+  )
+
+ggplot(medals_long, aes(x = log_gdp, y = medals, color = medal_type)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", se = FALSE, linewidth = 1.5) +
+  facet_wrap(~ medal_type) +
+  scale_color_manual(
+    values = c(
+      gold = "#D4AF37",
+      silver = "#C0C0C0",
+      bronze = "#CD7F32"
+    )
+  ) +
+  guides(color = "none") +
+  labs(
+    title = "GDP per Capita and Olympic Medal Types",
+    x = "Log GDP per Capita",
+    y = "Medals",
+    color = ""
+  ) +
+  theme_minimal()
+```
+
+```{r visualization6}
+country_medals <- olympics_final %>%
+  group_by(country) %>%
+  summarise(
+    gold = sum(gold, na.rm = TRUE),
+    silver = sum(silver, na.rm = TRUE),
+    bronze = sum(bronze, na.rm = TRUE),
+    total = sum(total, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+norway <- country_medals %>%
+  filter(country == "Norway") %>%
+  select(gold, silver, bronze)
+
+waffle(
+  c(
+    Gold = norway$gold,
+    Silver = norway$silver,
+    Bronze = norway$bronze
+  ),
+  rows = 10,
+  colors = c("#D4AF37", "#C0C0C0", "#CD7F32"),
+  title = "Norway Olympic Medals",
+  xlab = "1 square = 1 medal"
+)
+
+top10 <- country_medals %>%
+  slice_max(total, n = 10)
+
+medals_long_counts <- top10 %>%
+  pivot_longer(
+    cols = c(gold, silver, bronze),
+    names_to = "medal",
+    values_to = "count"
+  )
+
+ggplot(medals_long_counts, aes(fill = medal, values = count)) +
+  geom_waffle(
+    n_rows = 10,
+    color = "white",
+    size = 0.25
+  ) +
+  facet_wrap(~ country, ncol = 2) +
+  scale_fill_manual(
+    values = c(
+      gold = "#D4AF37",
+      silver = "#C0C0C0",
+      bronze = "#CD7F32"
+    )
+  ) +
+  theme_minimal() +
+  labs(title = "Olympic Medal Composition by Country",
+       caption = "For Top 10 Countries in Total Medal Count")
+```
