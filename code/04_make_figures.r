@@ -48,12 +48,20 @@ ggsave("output/figures/fig3_raw_dist_GDPpercap.png", plot = p3, width = 8, heigh
 
 #Plots after transformation
 #Medals Distribution 
-p4 = ggplot(olympics_viz_clean, aes(x = medals_per_million)) +
+
+olympics_viz <- olympics_final %>%
+  mutate(
+    medals_per_million = total / (population_total / 1e6),
+    log_gdp = log(gdp_per_capita_ppp),
+    log_population = log(population_total),
+    log_total_medals = log1p(total)
+  )
+
+p4 = ggplot(olympics_viz, aes(x = log_total_medals)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
-  coord_cartesian(xlim = c(0, 10)) +
   labs(
-    title = "Distribution of Medals per Million People (Zoomed In)",
-    x = "Medals per Million",
+    title = "Log-Transformed Distribution of Olympic Medals",
+    x = "log(1 + Total Medals)",
     y = "Number of Country-Year Observations"
   ) +
   theme_minimal()
