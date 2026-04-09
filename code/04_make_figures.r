@@ -171,7 +171,7 @@ p11 = ggplot(olympics_viz_clean, aes(x = log_gdp, y = medals_per_million)) +
   theme_minimal()
 ggsave("output/figures/fig11_GPD_medals_per_millp.png", plot = p11, width = 8, height = 5, dpi = 300)
 
-#Total medals over time for a topmajor countries
+#Total medals over time for a top major countries
 top_countries_total <- olympics_final %>%
   group_by(country) %>%
   summarise(total_medals_all_years = sum(total, na.rm = TRUE)) %>%
