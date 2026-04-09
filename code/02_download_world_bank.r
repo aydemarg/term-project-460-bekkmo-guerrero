@@ -144,9 +144,11 @@ indicators <- c(
 )
 
 # Download indicators into a list of data frames
+# help from AI with the prompt: how can I use this list of indicators to grab data from the world bank API and combine into one data frame?
 safe_get <- purrr::possibly(get_wb_indicator, otherwise = NULL)
 
 indicators_list <- imap(indicators, safe_get)
+indicators_list <- indicators_list[!sapply(indicators_list, is.null)]
 
 # Combine indicators data sets into one wide dataset
 # reduce() combined two elements of a list at a time until one object is left
