@@ -1,6 +1,8 @@
 # term-project-406-bekkmo-guerrero
 How well can GDP per capita, population size, health expenditure, and other variables predict Olympic medal counts across countries in the Summer and Winter Olympics?
   
+Improved Question: How well can country-level characteristics predict Olympic medal performance across nations?
+
 # Tentative Analysis Plan
 
 We will conduct a descriptive and predictive analysis of Olympic performance across countries.
