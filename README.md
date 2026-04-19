@@ -85,5 +85,3 @@ Countries worldwide that participated in the Summer and Winter Olympic Games.
 The datasets will be merged by country name and year.
 
 The Olympic dataset provides the outcome variable (medal counts), while the World Bank dataset provides economic and demographic predictors, including, but not limited to, GDP per capita, population, and health expenditure.
-
-Combining these datasets allows us to analyze how country-level economic factors relate to Olympic performance.
