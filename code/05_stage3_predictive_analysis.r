@@ -19,17 +19,16 @@ library(vip)
 load("data_clean/olympics_final.RData")
 
 #check object name 
-ls()
+#ls()
 
 #assign to data
 data = olympics_final
 
-
 # -----------------------------------
 # 3. Basic checks
 # -----------------------------------
-dim(data)
-glimpse(data)
+#dim(data)
+#glimpse(data)
 
 # -----------------------------------
 # 4. Drop variables with too much missingness
@@ -58,8 +57,8 @@ data = data |>
 # -----------------------------------
 # 7. Check remaining missingness
 # -----------------------------------
-colSums(is.na(data)) |> sort(decreasing = TRUE)
-dim(data)
+#colSums(is.na(data)) |> sort(decreasing = TRUE)
+#dim(data)
 
 # -----------------------------------
 # 8. Train / test split
@@ -93,7 +92,7 @@ recipe_model = recipe(total_medals ~ ., data = train_data) |>
   step_normalize(all_numeric_predictors())
 
 # inspect processed training data
-prep(recipe_model) |> juice() |> glimpse()
+# recipe_model |> prep() |> juice() |> glimpse()
 
 # -----------------------------------
 # 11. Model 1: Linear Regression
@@ -114,7 +113,7 @@ lm_results = lm_workflow |>
 lm_metrics = lm_results |>
   collect_metrics()
 
-lm_metrics
+#lm_metrics
 
 # -----------------------------------
 # 12. Model 2: Lasso Regression
@@ -141,9 +140,9 @@ lasso_results = lasso_workflow |>
 lasso_best = lasso_results |>
   show_best(metric = "rmse")
 
-lasso_best
+#lasso_best
 
-autoplot(lasso_results)
+#autoplot(lasso_results) + theme_bw()
 
 # -----------------------------------
 # 13. Model 3: Random Forest
@@ -173,9 +172,9 @@ rf_results = rf_workflow |>
 rf_best = rf_results |>
   show_best(metric = "rmse")
 
-rf_best
+#rf_best
 
-autoplot(rf_results)
+#autoplot(rf_results) + theme_bw()
 
 # -----------------------------------
 # 14. Compare cross-validation performance
@@ -200,7 +199,7 @@ rf_summary = rf_results |>
 
 model_comparison = bind_rows(lm_summary, lasso_summary, rf_summary)
 
-model_comparison
+#model_comparison
 
 # -----------------------------------
 # 15. Finalize the best model
@@ -222,7 +221,7 @@ rf_fit = final_rf |>
 rf_test_metrics = rf_fit |>
   collect_metrics()
 
-rf_test_metrics
+#rf_test_metrics
 
 # -----------------------------------
 # 17. Test-set predictions
@@ -230,19 +229,20 @@ rf_test_metrics
 rf_predictions = rf_fit |>
   collect_predictions()
 
-head(rf_predictions)
+#head(rf_predictions)
 
 # -----------------------------------
 # 18. Plot predicted vs actual medals
 # -----------------------------------
-ggplot(rf_predictions, aes(x = .pred, y = total_medals)) +
-  geom_point(alpha = 0.7) +
-  geom_abline(slope = 1, intercept = 0) +
-  labs(
-    title = "Predicted vs Actual Olympic Medal Counts",
-    x = "Predicted medals",
-    y = "Actual medals"
-  )
+# ggplot(rf_predictions, aes(x = .pred, y = total_medals)) +
+#   geom_point(alpha = 0.7) +
+#   geom_abline(slope = 1, intercept = 0) +
+#   labs(
+#     title = "Predicted vs Actual Olympic Medal Counts",
+#     x = "Predicted medals",
+#     y = "Actual medals"
+#   ) +
+#   theme_minimal()
 
 # -----------------------------------
 # 19. Variable importance for Random Forest
@@ -267,7 +267,7 @@ importance_tbl = rf_fit_importance |>
   extract_fit_parsnip() |>
   vip::vi()
 
-importance_tbl
+#importance_tbl
 
 # -----------------------------------
 # 20. Optional: coefficients from best Lasso model
@@ -284,4 +284,4 @@ lasso_coefs = lasso_fit |>
   extract_fit_parsnip() |>
   tidy()
 
-lasso_coefs
+#lasso_coefs

@@ -1,7 +1,17 @@
+#Install packages if needed
+#install.packages("tidyverse")
+#install.packages("patchwork")
+#install.packages("rnaturalearth")
+#install.packages("sf")
+#install.packages("waffle")
+
 #Packages
 
 library(tidyverse)
 library(patchwork)
+library(waffle)
+library(rnaturalearth)
+library(sf)
 
 #Load Data
 load("data_clean/olympics_final.RData")

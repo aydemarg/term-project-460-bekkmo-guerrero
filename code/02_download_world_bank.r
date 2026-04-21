@@ -1,7 +1,15 @@
+#Install packages if needed
+#install.packages("tidyverse")
+#install.packages("httr")
+#install.packages("jsonlite")
+#install.packages("furrr")
+
 #Libraries
 library(tidyverse)
 library(httr)
 library(jsonlite)
+library(furrr)
+plan(multisession)
 
 
 #-----------------------------------
@@ -147,7 +155,8 @@ indicators <- c(
 # help from AI with the prompt: how can I use this list of indicators to grab data from the world bank API and combine into one data frame?
 safe_get <- purrr::possibly(get_wb_indicator, otherwise = NULL)
 
-indicators_list <- imap(indicators, safe_get)
+# use future_imap() to cut run time
+indicators_list <- future_imap(indicators, safe_get)
 indicators_list <- indicators_list[!sapply(indicators_list, is.null)]
 
 # Combine indicators data sets into one wide dataset
@@ -159,4 +168,4 @@ load("data_raw/olympics_raw.RData")
 olympics_indicators <- left_join(olympics_all, indicators_final, by = c("country", "year"))
 
 #save raw data
-save(indicators_final, file = "data_raw/world_bank_raw.RData")
+save(olympics_indicators, file = "data_raw/world_bank_raw.RData")

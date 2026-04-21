@@ -1,10 +1,11 @@
-
+#Install packages if needed
+#install.packages("tidyverse")
 
 #load Packages
 library(tidyverse)
 
 #load data
-load("data_raw/olympics_raw.RData")
+load("data_raw/olympics_all.RData")
 load("data_raw/world_bank_raw.RData")
 
 #----------------------------

@@ -1,3 +1,8 @@
+#Install packages if needed
+#install.packages("tidyverse")
+#install.packages("rvest")
+#install.packages("janitor")
+
 # Packages
 library(tidyverse)
 library(rvest)
@@ -166,4 +171,4 @@ olympics_all |>
   filter(n > 1)
 
 #save raw data
-save(olympics_all, file = "data_raw/olympics_raw.RData")
+save(olympics_all, file = "data_raw/olympics_all.RData")
