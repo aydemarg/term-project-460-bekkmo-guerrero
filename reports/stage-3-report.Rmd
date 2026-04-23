@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-*Everything in italics still needs to be edited*
+**Everything in bold still needs to be edited**
 
 ## Research Question: Predictive
 
@@ -17,7 +17,7 @@ Can economic and demographic indicators be used as a predictor of Olympic medal 
 
 ### Why does this matter?
 
-We chose this topic because we are both bring international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic and demographic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics, *which has implications for policymakers.*
+We chose this topic because we are both bring international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic and demographic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics, **which has implications for policymakers**.
 
 ### Why is predictive analysis the best for this project?
 
@@ -31,6 +31,55 @@ Our project relies on two main data sources. The first is Olympic medal data fro
 
 The Olympic dataset provides information on medal counts by country, year, and season, while the World Bank dataset adds economic and social context for each country-year observation. Combining these two sources allowed us to study how national characteristics may relate to Olympic performance.
 
+### Key variables of interest from Olympics Medal Data
+
+| Variable | Name | Description |
+|--|--|----|
+| Country | `country` | Country competing in the Olympics |
+| Gold Medals | `gold` | Total number of gold medals won by a country |
+| Silver Medals | `silver` | Total number of silver medals won by a country |
+| Bronze Medals | `bronze` | Total number of bronze medals won by a country |
+| Total Medals | `total` | Total number of medals won by a country |
+| Year | `year` | Year the Olympics Games were held |
+| Season | `season` | Summer or Winter Olympics |
+
+### Key variables of interest from World Bank Indicators
+
+| Variable | Name | Description |
+|--|--|----|
+| GDP Per Capita | `gdp_per_capita_ppp` | GDP per capita of a country measured in current USD |
+| Total Population | `population_total` | Total population of a country |
+| Education Spending | `education_spending` | Education spending of a country measures in Percentage of GDP, National currency, Percentage of expenditure |
+| Life Expectancy | `life_expectancy.x` | Average life expectancy of a country measures in years |
+
+*Note: The World Bank Indicators dataset includes 70 variables, excluding country and year as the ID variables*
+
 ## Predictive Analysis
+
+### Exploring the Data with Figures
+
+#### Global Distribution of Olympic Medal Totals
+
+![](output/figures/fig13_worldmap_participation.png)
+
+This figure uses a choropleth map to show Olympic medal totals by country for the Summer and Winter Olympics. A map was chosen because the goal is to show geographic patterns in medal distribution across the world, and faceting by season allows an easy comparison between Summer and Winter Games. Color intensity represents total medals, with darker colors indicating higher totals. Because medal totals are highly skewed, a square-root transformation was applied to the color scale so that differences among countries with smaller medal totals are still visible. Gray countries are countries that do not appear in the medal dataset.
+
+#### Relationship Between Economic Development and Olympic Success
+
+![](output/figures/fig14_dist_GDP_sucesslevel.png)
+
+This figure uses a scatter plot with marginal rug plots to examine the relationship between economic development (measured by log GDP per capita) and Olympic success (measured by total medals), with point size representing population. A scatter plot is used because it allows visualization of the association between two continuous variables while also capturing variation across countries and Olympic seasons. Rug plots along the axes provide additional detail on the distribution of observations for both log GDP per capita and total medal counts. Point size is scaled by population to account for differences in country size, which may influence both economic output and Olympic performance. Faceting by season separates Summer and Winter Olympics, allowing for comparison of whether the GDP–medal relationship differs across Olympic contexts.
+
+#### Economic Development and Medal Type Distribution
+![](output/figures/fig15_medals_type.png)
+
+This figure uses a scatter plot with smoothed trend lines to show the relationship between education spending and Olympic medal outcomes by medal type (gold, silver, and bronze). A scatter plot is chosen because it allows visualization of the distribution of country-year observations and the underlying variation in medal counts across different levels of education spending. A LOESS smoothing line is added to highlight the nonlinear relationship between education spending and medal performance without imposing a strict functional form. Faceting by medal type allows for clear comparison of how education spending relates differently to gold, silver, and bronze medal outcomes. Color distinguishes medal types using the standard Olympic color scheme, and the smoothing trends help reveal whether higher education investment is associated with systematically higher medal counts across different medal categories.
+
+#### Medal Composition of Top Olympic Countries
+![](output/figures/fig16_top10_medal_comp.png)
+
+This figure uses a waffle chart to show the composition of Olympic medals (gold, silver, and bronze) for the 10 countries with the highest average life expectancy. A waffle chart is chosen because it provides an intuitive, discrete visualization of categorical parts of a whole, where each square represents one medal and allows direct visual comparison of both total medal counts and medal composition across countries. Faceting by country enables easy comparison of how medal distributions differ across nations with similar levels of life expectancy. Color distinguishes medal types, with gold, silver, and bronze mapped to their standard Olympic color scheme. The figure highlights whether countries with higher life expectancy tend to have not only higher total medal counts but also different compositions of medal types.
+
+### Building the Machine Learning Model
 
 *Train a machine learning model to predict your outcome variable using other variables in your data. Follow all the correct ML procedures: set aside a test set, tune your model(s) through cross-validation, and evaluate performance in the test set only after finalizing your model. Interpret the model’s performance and its limitations.*
