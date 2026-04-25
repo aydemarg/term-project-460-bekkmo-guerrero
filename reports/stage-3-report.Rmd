@@ -107,7 +107,7 @@ This figure uses a scatter plot with marginal rug plots to examine the relations
 
 This figure uses a scatter plot with smoothed trend lines to show the relationship between education spending and Olympic medal outcomes by medal type (gold, silver, and bronze). A scatter plot is chosen because it allows visualization of the distribution of country-year observations and the underlying variation in medal counts across different levels of education spending. A LOESS smoothing line is added to highlight the nonlinear relationship between education spending and medal performance without imposing a strict functional form. Faceting by medal type allows for clear comparison of how education spending relates differently to gold, silver, and bronze medal outcomes. Color distinguishes medal types using the standard Olympic color scheme, and the smoothing trends help reveal whether higher education investment is associated with systematically higher medal counts across different medal categories.
 
-#### Medal Composition of Top Olympic Countries
+#### Medal Composition in High Life Expectancy Countries
 ![](../output/figures/fig16_top10_medal_comp.png)
 
 This figure uses a waffle chart to show the composition of Olympic medals (gold, silver, and bronze) for the 10 countries with the highest average life expectancy. A waffle chart is chosen because it provides an intuitive, discrete visualization of categorical parts of a whole, where each square represents one medal and allows direct visual comparison of both total medal counts and medal composition across countries. Faceting by country enables easy comparison of how medal distributions differ across nations with similar levels of life expectancy. Color distinguishes medal types, with gold, silver, and bronze mapped to their standard Olympic color scheme. The figure highlights whether countries with higher life expectancy tend to have not only higher total medal counts but also different compositions of medal types.
@@ -118,7 +118,7 @@ This figure uses a waffle chart to show the composition of Olympic medals (gold,
 
 #### Target variable
 
-We predict the total number of Olympic medals won by a country in a given Games. Because raw medal counts are heavily right-skewed — most countries win few or no medals while a small number of large economies win many — we transform the target using `log(1 + total_medals)`. The `log1p` form handles the many zero counts without dropping them, and it stabilizes the variance so that the linear and regularized linear models are not dominated by a handful of high-performing countries. All reported model predictions are back-transformed with `expm1()` when we need to interpret them on the original medal scale.
+We predict the total number of Olympic medals won by a country in a given Games. Because raw medal counts are heavily right-skewed, most countries win few or no medals while a small number of large economies win many, we transform the target using `log(1 + total_medals)`. The `log1p` form handles the many zero counts without dropping them, and it stabilizes the variance so that the linear and regularized linear models are not dominated by a handful of high-performing countries. All reported model predictions are back-transformed with `expm1()` when we need to interpret them on the original medal scale.
 
 #### Predictor set
 
@@ -169,7 +169,17 @@ The table below shows CV RMSE on the log scale for each model. Lower is better. 
 
 After selecting the best model by CV RMSE and refitting on the full training set, we evaluated once on the held-out test countries.
 
-![](../output/tables/test_set_metrics.png)
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(readr)
+library(gt)
+
+read_csv("../output/tables/test_set_metrics.csv") |>
+  gt() |>
+  tab_header(
+    title = "Test Set Performance Metrics"
+  )
+```
+
 
 The gap between CV RMSE and test RMSE is a useful diagnostic. A much larger test error suggests overfitting or that the test countries are systematically different from training countries; similar errors suggest stable generalization.
 
