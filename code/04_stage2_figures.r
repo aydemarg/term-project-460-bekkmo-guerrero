@@ -411,3 +411,5 @@ p16 = ggplot(medals_long_counts, aes(fill = medal, values = count)) +
         plot.subtitle = element_text(hjust = 0.5) )
 
 ggsave("output/figures/fig16_top10_medal_comp.png", plot = p16, width = 8, height = 5, dpi = 300)
+
+message("Script 4 complete. Outputs saved to /output.")

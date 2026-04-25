@@ -6,6 +6,8 @@
 #install.packages("tidymodels")
 #install.packages("glmnet")
 #install.packages("vip")
+#install.packages("gt")
+#install.packages("webshot2")
 
 # -------------------------------
 # 1. Libraries
@@ -15,6 +17,10 @@ library(tidymodels)
 library(glmnet)
 library(ranger)
 library(vip)
+library(gt)
+library(readr)
+library(dplyr)
+library(webshot2)
 
 # -------------------------------
 # 2. Load data
@@ -53,10 +59,10 @@ data <- data |>
 #     gold/silver/bronze are components of total -> perfect leakage.
 #     total_medals is the raw target -> drop now that we have the log version.
 #     year is dropped to keep a simple cross-sectional predictor set.
-#     country is KEPT in the frame (needed for grouped CV) but its role in
-#     the recipe is set to "id variable" so it is not used as a predictor.
+#     country, year, and season are KEPT in the frame (needed for grouped CV) but their role in
+#     the recipe is set to "id variable" so they are not used as a predictor.
 data <- data |>
-  select(-gold, -silver, -bronze, -total_medals, -year)
+  select(-gold, -silver, -bronze, -total_medals)
 
 # Sanity check: the frame should now contain country, season, the WB
 # predictors, and log_total_medals.
@@ -86,14 +92,14 @@ cv_folds <- group_vfold_cv(train_data, group = country, v = 5)
 # 6. Preprocessing recipe
 # -----------------------------------------------------------------------------
 # Steps (executed inside each CV resample so there is NO information leakage):
-#   - Mark country as an id variable (kept in data, not used as a predictor).
+#   - Mark country, year, and season as an id variable (kept in data, not used as a predictor).
 #   - Median-impute numeric predictors (some indicators have missing values).
 #   - Mode-impute nominal predictors.
 #   - Dummy-encode nominal predictors (season -> one dummy column).
 #   - Drop zero-variance predictors (protects lm/glmnet from degenerate cols).
 #   - Standardize numeric predictors (helps Lasso; harmless for RF).
 recipe_model <- recipe(log_total_medals ~ ., data = train_data) |>
-  update_role(country, new_role = "id variable") |>
+  update_role(country, year, season, new_role = "id variable") |>
   step_impute_median(all_numeric_predictors()) |>
   step_impute_mode(all_nominal_predictors()) |>
   step_dummy(all_nominal_predictors()) |>
@@ -224,12 +230,24 @@ model_comparison <- bind_rows(
 dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
 write_csv(model_comparison, "output/tables/cv_model_comparison_long.csv")
 
+model_comparison_img <- model_comparison |>
+  gt() |>
+  fmt_number(columns = c(mean, std_err), decimals = 3)
+
+gtsave(model_comparison_img, "output/tables/cv_model_comparison_long.png")
+
 model_comparison_wide <- model_comparison |>
   select(model, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   arrange(rmse)
 
-write_csv(model_comparison_wide, "output/tables/cv_model_comparison.csv")
+write_csv(model_comparison_wide, "output/tables/cv_model_comparison_wide.csv")
+
+model_comparison_wide_img <- model_comparison_wide |>
+  gt() |>
+  fmt_number(columns = c(rmse, mae, rsq), decimals = 3)
+
+gtsave(model_comparison_wide_img, "output/tables/cv_model_comparison_wide.png")
 
 # -----------------------------------------------------------------------------
 # 12. Pick the best model and fit on full training data, evaluate on test set
@@ -277,6 +295,12 @@ test_metrics_with_baseline <- bind_rows(
 )
 
 write_csv(test_metrics_with_baseline, "output/tables/test_set_metrics.csv")
+
+test_metrics_with_baseline_img <- test_metrics_with_baseline |>
+  gt() |>
+  fmt_number(columns = .estimate, decimals = 3)
+
+gtsave(test_metrics_with_baseline_img, "output/tables/test_set_metrics.png")
 
 # -----------------------------------------------------------------------------
 # 13. Predicted vs. actual on the test set (log space and back-transformed)
@@ -347,6 +371,12 @@ if (best_model_name == "Random Forest") {
   
   write_csv(importance_tbl, "output/tables/rf_variable_importance.csv")
   
+  importance_tbl_img <- importance_tbl |>
+    gt() |>
+    fmt_number(columns = Importance, decimals = 3)
+  
+  gtsave(importance_tbl_img, "output/tables/rf_variable_importance.png")
+  
   p_vip <- importance_tbl |>
     slice_max(Importance, n = 15) |>
     ggplot(aes(x = reorder(Variable, Importance), y = Importance)) +
@@ -380,6 +410,12 @@ lasso_coefs <- lasso_fit |>
 
 write_csv(lasso_coefs, "output/tables/lasso_nonzero_coefficients.csv")
 
+lasso_coefs_img <- lasso_coefs |>
+  gt() |>
+  fmt_number(columns = c(estimate, penalty), decimals = 3)
+
+gtsave(lasso_coefs_img, "output/tables/lasso_nonzero_coefficients.png")
+
 # -----------------------------------------------------------------------------
 # 16. Save all fitted model objects for reproducibility
 # -----------------------------------------------------------------------------
@@ -394,7 +430,7 @@ save(
 # Stop parallel backend if it was started above.
 # if (exists("cl")) stopCluster(cl)
 
-message("Stage 3 analysis complete. Outputs saved to /output.")
+message("Script 5 complete. Outputs saved to /output.")
 
  
  

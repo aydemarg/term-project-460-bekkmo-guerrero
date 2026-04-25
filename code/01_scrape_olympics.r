@@ -173,3 +173,4 @@ olympics_all |>
 #save raw data
 save(olympics_all, file = "data_raw/olympics_all.RData")
 
+message("Script 1 complete.")

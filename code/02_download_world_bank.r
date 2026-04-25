@@ -169,3 +169,5 @@ olympics_indicators <- left_join(olympics_all, indicators_final, by = c("country
 
 #save raw data
 save(olympics_indicators, file = "data_raw/world_bank_raw.RData")
+
+message("Script 2 complete.")

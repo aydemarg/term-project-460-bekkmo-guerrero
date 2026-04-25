@@ -41,3 +41,5 @@ summary(olympics_final$year)
 
 #save clean data
 save(olympics_final, file = "data_clean/olympics_final.RData")
+
+message("Script 3 complete.")
