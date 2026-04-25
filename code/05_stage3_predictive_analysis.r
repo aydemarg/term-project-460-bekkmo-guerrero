@@ -8,6 +8,7 @@
 #install.packages("vip")
 #install.packages("gt")
 #install.packages("webshot2")
+#install.packages("patchwork")
 
 # -------------------------------
 # 1. Libraries
@@ -21,6 +22,7 @@ library(gt)
 library(readr)
 library(dplyr)
 library(webshot2)
+library(patchwork)
 
 # -------------------------------
 # 2. Load data
@@ -59,7 +61,7 @@ data <- data |>
 #     gold/silver/bronze are components of total -> perfect leakage.
 #     total_medals is the raw target -> drop now that we have the log version.
 #     year is dropped to keep a simple cross-sectional predictor set.
-#     country, year, and season are KEPT in the frame (needed for grouped CV) but their role in
+#     country and year are KEPT in the frame (needed for grouped CV) but their role in
 #     the recipe is set to "id variable" so they are not used as a predictor.
 data <- data |>
   select(-gold, -silver, -bronze, -total_medals)
@@ -92,14 +94,14 @@ cv_folds <- group_vfold_cv(train_data, group = country, v = 5)
 # 6. Preprocessing recipe
 # -----------------------------------------------------------------------------
 # Steps (executed inside each CV resample so there is NO information leakage):
-#   - Mark country, year, and season as an id variable (kept in data, not used as a predictor).
+#   - Mark country and year as an id variable (kept in data, not used as a predictor).
 #   - Median-impute numeric predictors (some indicators have missing values).
 #   - Mode-impute nominal predictors.
 #   - Dummy-encode nominal predictors (season -> one dummy column).
 #   - Drop zero-variance predictors (protects lm/glmnet from degenerate cols).
 #   - Standardize numeric predictors (helps Lasso; harmless for RF).
 recipe_model <- recipe(log_total_medals ~ ., data = train_data) |>
-  update_role(country, year, season, new_role = "id variable") |>
+  update_role(country, year, new_role = "id variable") |>
   step_impute_median(all_numeric_predictors()) |>
   step_impute_mode(all_nominal_predictors()) |>
   step_dummy(all_nominal_predictors()) |>
@@ -319,33 +321,102 @@ p_pred_log <- ggplot(predictions, aes(x = .pred, y = log_total_medals)) +
   geom_point(alpha = 0.5, color = "steelblue") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   labs(
-    title    = paste0("Predicted vs. Actual (log scale) -- ", best_model_name),
+    title    = paste0(best_model_name, " - Pred. vs. Actual (Log)"),
     subtitle = "Test-set predictions. Dashed line is perfect prediction.",
     x        = "Predicted log(1 + medals)",
     y        = "Actual log(1 + medals)"
   ) +
   theme_minimal()
 
-ggsave("output/figures/fig17_pred_vs_actual_log.png",
-       plot = p_pred_log, width = 8, height = 5, dpi = 300)
-
 # Plot on the original medal-count scale for intuitive reading.
 p_pred_raw <- ggplot(predictions, aes(x = pred_medals, y = actual_medals)) +
   geom_point(alpha = 0.5, color = "steelblue") +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
   labs(
-    title    = paste0("Predicted vs. Actual Medal Counts -- ", best_model_name),
+    title    = paste0(best_model_name, " - Pred. vs. Actual Medals"),
     subtitle = "Test-set predictions, back-transformed to medal scale.",
     x        = "Predicted total medals",
     y        = "Actual total medals"
   ) +
   theme_minimal()
 
-ggsave("output/figures/fig18_pred_vs_actual_counts.png",
-       plot = p_pred_raw, width = 8, height = 5, dpi = 300)
+ggsave("output/figures/fig17_pred_vs_actual_medals.png",
+       plot = p_pred_raw + p_pred_log, width = 8, height = 5, dpi = 300)
 
 # -----------------------------------------------------------------------------
-# 14. Variable importance (only meaningful if RF wins; compute it anyway)
+# 14. Predicted vs. actual on the test set for non-best models
+# -----------------------------------------------------------------------------
+# Function to get predictions for models
+get_predictions <- function(fitted_workflow, split) {
+  fitted_workflow |>
+    last_fit(split) |>
+    collect_predictions() |>
+    mutate(
+      pred_medals   = expm1(.pred),
+      actual_medals = expm1(log_total_medals)
+    )
+}
+
+# Fit predictions for linear regression
+lm_final <- lm_workflow |>
+  last_fit(split, metrics = metric_set(rmse, rsq, mae))
+
+pred_lm <- lm_final |>
+  collect_predictions() |>
+  mutate(
+    pred_medals   = expm1(.pred),
+    actual_medals = expm1(log_total_medals)
+  )
+
+# Fit predictions for lasso regression
+lasso_final <- lasso_workflow |>
+  finalize_workflow(select_best(lasso_results, metric = "rmse")) |>
+  last_fit(split, metrics = metric_set(rmse, rsq, mae))
+
+pred_lasso <- lasso_final |>
+  collect_predictions() |>
+  mutate(
+    pred_medals   = expm1(.pred),
+    actual_medals = expm1(log_total_medals)
+  )
+
+# Function to plot
+plot_pred_vs_actual <- function(df, model_name, file_prefix) {
+  
+  p_log <- ggplot(df, aes(x = .pred, y = log_total_medals)) +
+    geom_point(alpha = 0.5, color = "steelblue") +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    labs(
+      title = paste0(model_name, " - Pred. vs. Actual (Log)"),
+      subtitle = "Test-set predictions. Dashed line is perfect prediction.",
+      x = "Predicted log(1 + medals)",
+      y = "Actual log(1 + medals)"
+    ) +
+    theme_minimal()
+  
+  p_raw <- ggplot(df, aes(x = pred_medals, y = actual_medals)) +
+    geom_point(alpha = 0.5, color = "steelblue") +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    labs(
+      title = paste0(model_name, " - Pred. vs. Actual Medals"),
+      subtitle = "Test-set predictions, back-transformed to medal scale.",
+      x = "Predicted total medals",
+      y = "Actual total medals"
+    ) +
+    theme_minimal()
+  
+  ggsave(
+    paste0("output/figures/", file_prefix, "_medals.png"),
+    plot = p_raw + p_log, width = 8, height = 5, dpi = 300
+  )
+}
+
+# Run for each model
+plot_pred_vs_actual(pred_lm, "Linear Regression", "lm_pred_vs_actual")
+plot_pred_vs_actual(pred_lasso, "Lasso Regression", "lasso_pred_vs_actual")
+
+# -----------------------------------------------------------------------------
+# 15. Variable importance (only meaningful if RF wins; compute it anyway)
 # -----------------------------------------------------------------------------
 # Refit RF with impurity importance on the full training set.
 if (best_model_name == "Random Forest") {
@@ -395,7 +466,7 @@ if (best_model_name == "Random Forest") {
 }
 
 # -----------------------------------------------------------------------------
-# 15. Lasso coefficients (for interpretability of the linear model family)
+# 65. Lasso coefficients (for interpretability of the linear model family)
 # -----------------------------------------------------------------------------
 final_lasso <- lasso_workflow |>
   finalize_workflow(select_best(lasso_results, metric = "rmse"))
@@ -417,7 +488,7 @@ lasso_coefs_img <- lasso_coefs |>
 gtsave(lasso_coefs_img, "output/tables/lasso_nonzero_coefficients.png")
 
 # -----------------------------------------------------------------------------
-# 16. Save all fitted model objects for reproducibility
+# 17. Save all fitted model objects for reproducibility
 # -----------------------------------------------------------------------------
 save(
   split, cv_folds, recipe_model,

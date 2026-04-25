@@ -17,11 +17,11 @@ Can economic and demographic indicators be used as a predictor of Olympic medal 
 
 ### Why does this matter?
 
-We chose this topic because we are both bring international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic and demographic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics, **which has implications for policymakers**.
+We chose this topic because we both bring international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic and demographic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics, **which has implications for policymakers**.
 
 ### Why is predictive analysis the best for this project?
 
-Our goal for this project is to explore how a country's economic and demographic indicators are related to a country's Olympic performance in medal count. Predictive analysis is the best fit for this goal because it leverages historical data, statistical learning, and machine learning to forecast future outcomes.
+Our goal for this project is to explore how a country's economic and demographic indicators are related to a country's Olympic performance in medal count. Predictive analysis is the best fit for this goal because it leverages historical data, statistical learning, and machine learning to estimate Olympic medal outcomes outcomes using historical data.
 
 ## Data Sources
 
@@ -130,19 +130,23 @@ All preprocessing lives inside the `tidymodels` recipe so that every step is ref
 
 #### Train / test split and cross-validation
 
-Our data is a country-year panel, so a random row-level split would place the same country on both sides of the split. This would let the model memorize country-specific effects (sports culture, federation funding, historical performance) and report optimistic test metrics that do not reflect its ability to generalize. We instead use a **group-based 80/20 split** (`group_initial_split` with `group = country`), so every country falls entirely in training or entirely in testing. Within the training set we use **5-fold cross-validation, also grouped by country** (`group_vfold_cv`). Hyperparameters are tuned on those grouped folds. This,setup asks the honest question: "How well does this model predict medals for countries it has never seen?"
+Our data is a country-year panel, so a random row-level split would place the same country on both sides of the split. This would let the model memorize country-specific effects (sports culture, federation funding, historical performance) and report optimistic test metrics that do not reflect its ability to generalize. We instead use a **group-based 80/20 split** (`group_initial_split` with `group = country`), so every country falls entirely in training or entirely in testing. Within the training set we use **5-fold cross-validation, also grouped by country** (`group_vfold_cv`). Hyperparameters are tuned on those grouped folds. This setup asks the honest question: "How well does this model predict medals for countries it has never seen?"
 
 #### Basline (training mean) interpretation
 
+The baseline model predicts the same average medal outcome for every country. It provides a benchmark to determine whether more sophisticated models extract useful signal from the predictors. **Add more**
 
 #### Linear Regression interpretation
 
+Linear regression assumes a linear relationship between predictors and medal outcomes. It is interpretable and serves as a benchmark parametric model. **Add more**
 
 #### Lasso Regression interpretation
 
+Lasso adds an L1 penalty that shrinks coefficients toward zero, helping reduce overfitting and perform variable selection when predictors are numerous or correlated. **Add more**
 
 ### Random Forest interpretation
 
+Random Forest combines many decision trees to capture nonlinear relationships and interactions automatically. It is more flexible than linear models but less interpretable. **Add more**
 
 #### Models compared
 
@@ -161,9 +165,11 @@ Random Forest is our **challenge model**: it was not covered in class, and using
 
 The table below shows CV RMSE on the log scale for each model. Lower is better. Because CV is grouped by country, these values reflect generalization to held-out countries rather than to held-out years of familiar countries.
 
-![](../output/tables/cv_model_comparison.png)
+![](../output/tables/cv_model_comparison_wide.png)
 
 **Interpretation.** The baseline is the reference point. If a model's CV RMSE is comparable to the baseline, it is not learning anything the mean doesn't already capture. The tuned models should improve on the baseline; the ordering between Linear, Lasso, and Random Forest tells us whether the additional flexibility of RF is justified.
+
+Random Forest achieved the lowest grouped CV RMSE of 0.834, outperforming Lasso (0.861), Linear Regression (0.960), and the mean baseline (0.990).
 
 #### Test-set performance
 
@@ -175,11 +181,15 @@ The gap between CV RMSE and test RMSE is a useful diagnostic. A much larger test
 
 #### Predicted vs. actual
 
-The two figures below plot test-set predictions against actuals. The first is on the log scale (how the model was trained and evaluated); the second is back-transformed to the original medal count scale for interpretation. Points clustered tightly around the dashed 45° line indicate good predictions.
+The pair of figures below plot test-set predictions against actuals using the Random Forest model. The first is on the log scale (how the model was trained and evaluated); the second is back-transformed to the original medal count scale for interpretation. Points clustered tightly around the dashed 45° line indicate good predictions.
 
-![](../output/figures/fig17_pred_vs_actual_log.png)
+![](../output/figures/fig17_pred_vs_actual_medals.png)
 
-![](../output/figures/fig18_pred_vs_actual_counts.png)
+For comparison, the following two pairs of figures below plot test-set predictions against actuals using the Linear and Lasso regression models. **Add more interpretation**
+
+![](../output/figures/lm_pred_vs_actual_medals.png)
+
+![](../output/figures/lasso_pred_vs_actual_medals.png)
 
 #### What drives the predictions
 

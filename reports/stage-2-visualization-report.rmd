@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ### *How well Economic Indicators predict Olympic medal counts across countries in the Summer and Winter Olympics?*
 
-We chose this topic because we are both have international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics.
+We chose this topic because we both have international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics.
 
 We were especially interested in looking at whether broader measures of development, such as GDP, population, labor market conditions, and education-related indicators, are associated with Olympic success.
 
