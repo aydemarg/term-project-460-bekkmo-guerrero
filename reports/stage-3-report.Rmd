@@ -17,7 +17,8 @@ Can economic and demographic indicators be used as a predictor of Olympic medal 
 
 ### Why does this matter?
 
-We chose this topic because we both bring international perspectives, and the 2026 Winter Olympics in Italy sparked our interest in understanding why some countries perform better than others in the Olympic Games. This led us to explore whether economic and demographic indicators can help predict how many medals a country wins in both the Summer and Winter Olympics, **which has implications for policymakers**.
+We chose this topic out of genuine curiosity. We both bring international perspectives, and the 2026 Winter Olympics in Italy got us wondering why some countries consistently win more medals than others. That led us to ask whether economic and demographic indicators can help predict a country's medal count in the Summer and Winter Olympics. While the project is driven by our own interest in the question, we can also imagine practical uses, for example, a model that predicts medals from structural country characteristics could give sports ministries or National Olympic Committees a benchmark for comparing their own performance against structurally similar countries.
+
 
 ### Why is predictive analysis the best for this project?
 
