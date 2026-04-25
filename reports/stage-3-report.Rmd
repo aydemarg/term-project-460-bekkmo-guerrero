@@ -167,6 +167,14 @@ The table below shows CV RMSE on the log scale for each model. Lower is better. 
 
 ![](../output/tables/cv_model_comparison_wide.png)
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval = FALSE}
+library(readr)
+library(gt)
+library(knitr)
+
+kable(read_csv("../output/tables/cv_model_comparison_wide.csv", col_names = TRUE))
+```
+
 **Interpretation.** The baseline is the reference point. If a model's CV RMSE is comparable to the baseline, it is not learning anything the mean doesn't already capture. The tuned models should improve on the baseline; the ordering between Linear, Lasso, and Random Forest tells us whether the additional flexibility of RF is justified.
 
 Random Forest achieved the lowest grouped CV RMSE of 0.834, outperforming Lasso (0.861), Linear Regression (0.960), and the mean baseline (0.990).
@@ -175,10 +183,9 @@ Random Forest achieved the lowest grouped CV RMSE of 0.834, outperforming Lasso 
 
 After selecting the best model by CV RMSE and refitting on the full training set, we evaluated once on the held-out test countries.
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-library(readr)
-library(gt)
+![](../output/tables/test_set_metrics.png)
 
+```{r, echo=FALSE, message=FALSE, warning=FALSE, eval = FALSE}
 read_csv("../output/tables/test_set_metrics.csv") |>
   gt() |>
   tab_header(
