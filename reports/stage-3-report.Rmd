@@ -132,22 +132,6 @@ All preprocessing lives inside the `tidymodels` recipe so that every step is ref
 
 Our data is a country-year panel, so a random row-level split would place the same country on both sides of the split. This would let the model memorize country-specific effects (sports culture, federation funding, historical performance) and report optimistic test metrics that do not reflect its ability to generalize. We instead use a **group-based 80/20 split** (`group_initial_split` with `group = country`), so every country falls entirely in training or entirely in testing. Within the training set we use **5-fold cross-validation, also grouped by country** (`group_vfold_cv`). Hyperparameters are tuned on those grouped folds. This setup asks the honest question: "How well does this model predict medals for countries it has never seen?"
 
-#### Basline (training mean) interpretation
-
-The baseline model predicts the same average medal outcome for every country. It provides a benchmark to determine whether more sophisticated models extract useful signal from the predictors. **Add more**
-
-#### Linear Regression interpretation
-
-Linear regression assumes a linear relationship between predictors and medal outcomes. It is interpretable and serves as a benchmark parametric model. **Add more**
-
-#### Lasso Regression interpretation
-
-Lasso adds an L1 penalty that shrinks coefficients toward zero, helping reduce overfitting and perform variable selection when predictors are numerous or correlated. **Add more**
-
-### Random Forest interpretation
-
-Random Forest combines many decision trees to capture nonlinear relationships and interactions automatically. It is more flexible than linear models but less interpretable. **Add more**
-
 #### Models compared
 
 We compare three models of increasing flexibility against a simple baseline:
@@ -207,6 +191,22 @@ For comparison, the following two pairs of figures below plot test-set predictio
 ![](../output/figures/lm_pred_vs_actual_medals.png)
 
 ![](../output/figures/lasso_pred_vs_actual_medals.png)
+
+#### Basline (training mean) interpretation
+
+The baseline model predicts the same average medal outcome for every country. It provides a benchmark to determine whether more sophisticated models extract useful signal from the predictors. **Add more**
+
+#### Linear Regression interpretation
+
+Linear regression assumes a linear relationship between predictors and medal outcomes. It is interpretable and serves as a benchmark parametric model. **Add more**
+
+#### Lasso Regression interpretation
+
+Lasso adds an L1 penalty that shrinks coefficients toward zero, helping reduce overfitting and perform variable selection when predictors are numerous or correlated. **Add more**
+
+### Random Forest interpretation
+
+Random Forest combines many decision trees to capture nonlinear relationships and interactions automatically. It is more flexible than linear models but less interpretable. **Add more**
 
 #### What drives the predictions
 
