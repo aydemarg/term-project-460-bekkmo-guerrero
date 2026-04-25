@@ -232,24 +232,12 @@ model_comparison <- bind_rows(
 dir.create("output/tables", showWarnings = FALSE, recursive = TRUE)
 write_csv(model_comparison, "output/tables/cv_model_comparison_long.csv")
 
-model_comparison_img <- model_comparison |>
-  gt() |>
-  fmt_number(columns = c(mean, std_err), decimals = 3)
-
-gtsave(model_comparison_img, "output/tables/cv_model_comparison_long.png")
-
 model_comparison_wide <- model_comparison |>
   select(model, .metric, mean) |>
   pivot_wider(names_from = .metric, values_from = mean) |>
   arrange(rmse)
 
 write_csv(model_comparison_wide, "output/tables/cv_model_comparison_wide.csv")
-
-model_comparison_wide_img <- model_comparison_wide |>
-  gt() |>
-  fmt_number(columns = c(rmse, mae, rsq), decimals = 3)
-
-gtsave(model_comparison_wide_img, "output/tables/cv_model_comparison_wide.png")
 
 # -----------------------------------------------------------------------------
 # 12. Pick the best model and fit on full training data, evaluate on test set
@@ -297,12 +285,6 @@ test_metrics_with_baseline <- bind_rows(
 )
 
 write_csv(test_metrics_with_baseline, "output/tables/test_set_metrics.csv")
-
-test_metrics_with_baseline_img <- test_metrics_with_baseline |>
-  gt() |>
-  fmt_number(columns = .estimate, decimals = 3)
-
-gtsave(test_metrics_with_baseline_img, "output/tables/test_set_metrics.png")
 
 # -----------------------------------------------------------------------------
 # 13. Predicted vs. actual on the test set (log space and back-transformed)
@@ -442,12 +424,6 @@ if (best_model_name == "Random Forest") {
   
   write_csv(importance_tbl, "output/tables/rf_variable_importance.csv")
   
-  importance_tbl_img <- importance_tbl |>
-    gt() |>
-    fmt_number(columns = Importance, decimals = 3)
-  
-  gtsave(importance_tbl_img, "output/tables/rf_variable_importance.png")
-  
   p_vip <- importance_tbl |>
     slice_max(Importance, n = 15) |>
     ggplot(aes(x = reorder(Variable, Importance), y = Importance)) +
@@ -480,12 +456,6 @@ lasso_coefs <- lasso_fit |>
   arrange(desc(abs(estimate)))
 
 write_csv(lasso_coefs, "output/tables/lasso_nonzero_coefficients.csv")
-
-lasso_coefs_img <- lasso_coefs |>
-  gt() |>
-  fmt_number(columns = c(estimate, penalty), decimals = 3)
-
-gtsave(lasso_coefs_img, "output/tables/lasso_nonzero_coefficients.png")
 
 # -----------------------------------------------------------------------------
 # 17. Save all fitted model objects for reproducibility
