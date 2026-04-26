@@ -1,5 +1,5 @@
 model,.metric,.estimate
-Random Forest,rmse,0.8332596833645036
-Random Forest,rsq,0.3957084395090762
-Random Forest,mae,0.6909725653745681
+Random Forest,rmse,0.8360102900491349
+Random Forest,rsq,0.3968176176854443
+Random Forest,mae,0.6933616400503239
 Baseline (training mean),rmse,1.060065571350949

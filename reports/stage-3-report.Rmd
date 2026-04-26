@@ -69,15 +69,12 @@ For the World Bank data, we downloaded multiple economic and demographic indicat
 #### Exploring the Variables
 
 Once the datasets were merged, we explored the raw variables to better understand their distributions. These initial plots showed that several variables, especially GDP and population, were strongly right-skewed. Because of this, we applied log transformations to improve the distributions and make the visualizations easier to interpret.
-
 ![](../output/figures/fig7-8_log_dist_GDP-pop.png)
 
 Medal-related variables, however, remained somewhat skewed even after transformation, so we decided not to apply the log transformation for the data visualizations. This is expected, since many countries win very few medals while a small number of countries win many.
-
 ![](../output/figures/fig1-6_raw-log_dist.png)
 
 Education spending did not appear to be very skewed and life expectancy appeared to be left-skewed, so we decided to keep these variables as they are without a log transformation.
-
 ![](../output/figures/fig4-5_raw_dist_Educ-Life.png)
 
 Due to the scope of this stage, we decided to start our focus on these four predictor variables (GDP per capita, population, education spending, and life expectancy) to thoughtfully explore the data and the relationships between these variables and medals.
@@ -93,23 +90,21 @@ This step allowed us to focus the analysis on the years with the most complete i
 #### Global Distribution of Olympic Medal Totals
 
 ![](../output/figures/fig13_worldmap_participation.png)
-
 This figure uses a choropleth map to show Olympic medal totals by country for the Summer and Winter Olympics. A map was chosen because the goal is to show geographic patterns in medal distribution across the world, and faceting by season allows an easy comparison between Summer and Winter Games. Color intensity represents total medals, with darker colors indicating higher totals. Because medal totals are highly skewed, a square-root transformation was applied to the color scale so that differences among countries with smaller medal totals are still visible. Gray countries are countries that do not appear in the medal dataset.
 
 #### Relationship Between Economic Development and Olympic Success
 
 ![](../output/figures/fig14_dist_GDP_sucesslevel.png)
-
 This figure uses a scatter plot with marginal rug plots to examine the relationship between economic development (measured by log GDP per capita) and Olympic success (measured by total medals), with point size representing population. A scatter plot is used because it allows visualization of the association between two continuous variables while also capturing variation across countries and Olympic seasons. Rug plots along the axes provide additional detail on the distribution of observations for both log GDP per capita and total medal counts. Point size is scaled by population to account for differences in country size, which may influence both economic output and Olympic performance. Faceting by season separates Summer and Winter Olympics, allowing for comparison of whether the GDP–medal relationship differs across Olympic contexts.
 
 #### Economic Development and Medal Type Distribution
-![](../output/figures/fig15_medals_type.png)
 
+![](../output/figures/fig15_medals_type.png)
 This figure uses a scatter plot with smoothed trend lines to show the relationship between education spending and Olympic medal outcomes by medal type (gold, silver, and bronze). A scatter plot is chosen because it allows visualization of the distribution of country-year observations and the underlying variation in medal counts across different levels of education spending. A LOESS smoothing line is added to highlight the nonlinear relationship between education spending and medal performance without imposing a strict functional form. Faceting by medal type allows for clear comparison of how education spending relates differently to gold, silver, and bronze medal outcomes. Color distinguishes medal types using the standard Olympic color scheme, and the smoothing trends help reveal whether higher education investment is associated with systematically higher medal counts across different medal categories.
 
 #### Medal Composition in High Life Expectancy Countries
-![](../output/figures/fig16_top10_medal_comp.png)
 
+![](../output/figures/fig16_top10_medal_comp.png)
 This figure uses a waffle chart to show the composition of Olympic medals (gold, silver, and bronze) for the 10 countries with the highest average life expectancy. A waffle chart is chosen because it provides an intuitive, discrete visualization of categorical parts of a whole, where each square represents one medal and allows direct visual comparison of both total medal counts and medal composition across countries. Faceting by country enables easy comparison of how medal distributions differ across nations with similar levels of life expectancy. Color distinguishes medal types, with gold, silver, and bronze mapped to their standard Olympic color scheme. The figure highlights whether countries with higher life expectancy tend to have not only higher total medal counts but also different compositions of medal types.
 
 ## Building the Machine Learning Model
@@ -118,30 +113,30 @@ This figure uses a waffle chart to show the composition of Olympic medals (gold,
 
 #### Target variable
 
-We predict the total number of Olympic medals won by a country in a given Games. Because raw medal counts are heavily right-skewed, most countries win few or no medals while a small number of large economies win many, we transform the target using `log(1 + total_medals)`. The `log1p` form handles the many zero counts without dropping them, and it stabilizes the variance so that the linear and regularized linear models are not dominated by a handful of high-performing countries. All reported model predictions are back-transformed with `expm1()` when we need to interpret them on the original medal scale.
+We predict the total number of Olympic medals won by a country in a given Games. Because raw medal counts are heavily right-skewed, most countries win few or no medals while a small number of large economies win many, we transform the target using `log(1 + total_medals)`. The `log1p` form handles the many zero counts without dropping them, and it stabilizes the variance so that the models are not dominated by high-performing countries. All reported model predictions are back-transformed with `expm1()` when we need to interpret them on the original medal scale.
 
 #### Predictor set
 
-Starting from the merged Olympic–World Bank dataset, we removed any variable with more than 50% missing values, variables that would leak the outcome (`gold`, `silver`, `bronze`), and the raw `total_medals` column once the log target was created. We kept `season` (Summer / Winter) as a predictor because the two Games reward very different sports and country strengths. `country` is retained in the data frame so it can be used as a grouping variable for cross-validation, but it is marked as an ID column in the recipe so it does not enter the model as a predictor.
+Starting from the merged Olympic–World Bank dataset, we removed any variable with more than 50% missing values, variables that would leak the outcome (`gold`, `silver`, `bronze`), and the raw `total_medals` column once the log target was created. We kept `season` (Summer/Winter) as a predictor because the two Games reward different sports and country strengths. `country` and `year` are retained in the data frame so they can be used as a grouping variable for cross-validation, but they are marked as an ID column in the recipe so they do not enter the model as a predictor.
 
 #### Preprocessing recipe
 
-All preprocessing lives inside the `tidymodels` recipe so that every step is refit inside each cross-validation fold, preventing information leakage from validation rows into training rows. The steps are: median imputation for numeric predictors, modal imputation for nominal predictors, dummy encoding of nominal predictors, zero-variance filtering, and standardization of numeric predictors. Standardization is harmless for Random Forest but important for Lasso, so we apply it uniformly.
+All preprocessing is done in the `tidymodels` recipe so that every step is refit inside each cross-validation fold, preventing information leakage from validation rows into training rows. The steps are: median imputation for numeric predictors, modal imputation for nominal predictors, dummy encoding of nominal predictors, zero-variance filtering, and standardization of numeric predictors. Standardization is harmless for Random Forest but important for Lasso, so we apply it uniformly.
 
-#### Train / test split and cross-validation
+#### Train/test split and cross-validation
 
-Our data is a country-year panel, so a random row-level split would place the same country on both sides of the split. This would let the model memorize country-specific effects (sports culture, federation funding, historical performance) and report optimistic test metrics that do not reflect its ability to generalize. We instead use a **group-based 80/20 split** (`group_initial_split` with `group = country`), so every country falls entirely in training or entirely in testing. Within the training set we use **5-fold cross-validation, also grouped by country** (`group_vfold_cv`). Hyperparameters are tuned on those grouped folds. This setup asks the honest question: "How well does this model predict medals for countries it has never seen?"
+Our data is a country-year panel, so a random row-level split would place the same country on both sides of the split. This would allow the model to memorize country-specific effects and prevent its ability to generalize. We instead use a group-based 80/20 split (with `group = country`), so every country falls entirely in training or testing. Within the training set we use 5-fold cross-validation, also grouped by country. Hyperparameters are tuned on those grouped folds. This setup asks the question: "How well does this model predict medals for countries it has never seen?"
 
 #### Models compared
 
 We compare three models of increasing flexibility against a simple baseline:
 
-- **Baseline.** Always predict the training-set mean of `log(1 + total_medals)`. This tells us whether the ML models beat the trivial "no information" forecast.
-- **Linear Regression.** Standard OLS with the full preprocessed predictor matrix. No hyperparameters to tune.
-- **Lasso Regression.** Linear model with an L1 penalty that shrinks coefficients toward zero, tuned over a 30-point grid for `penalty`. Lasso is useful here because many of our 60+ World Bank indicators are highly correlated (for example total, male, and female unemployment).
-- **Random Forest.** A non-parametric ensemble of regression trees that captures non-linearities and interactions automatically. We tune `mtry` (predictors considered at each split) and `min_n` (minimum node size) over a 20-point grid, with 500 trees.
+- **Baseline:** Predict the training-set mean of `log(1 + total_medals)`. This tells us whether the ML models beat the baseline forecast with no information or historical data.
+- **Linear Regression:** Standard OLS with the full preprocessed predictor matrix. No hyperparameters to tune.
+- **Lasso Regression:** Linear model with an L1 penalty that shrinks coefficients toward zero, tuned over a 30-point grid for `penalty`. Lasso is useful here because many of our 60+ World Bank indicators are highly correlated.
+- **Random Forest:** A non-parametric ensemble of regression trees that captures non-linearities and interactions automatically. We tune `mtry` (predictors considered at each split) and `min_n` (minimum node size) over a 20-point grid, with 500 trees.
 
-Random Forest is our **challenge model**: it was not covered in class, and using `tidymodels` + `ranger` required learning a new workflow for model specification, tuning, and interpretation.
+**Challenge for this project:** Random Forest is our challenge model, since it was not covered in class, and we had to learn a new workflow for model specification, tuning, and interpretation to use `tidymodels` and `ranger`.
 
 ### Results
 
@@ -154,121 +149,121 @@ library(readr)
 library(dplyr)
 library(knitr)
 
-cv_model_comp <- read_csv(
-  "../output/tables/cv_model_comparison_wide.csv",
-  show_col_types = FALSE
-)
-
-cv_model_comp_clean <- cv_model_comp |>
-  slice(1:4)
-
-kable(
-  cv_model_comp_clean,
+kable(read_csv("../output/tables/cv_model_comparison_wide.csv", show_col_types = FALSE),
   digits = 3,
   col.names = c("Model", "RMSE", "MAE", "RSQ"),
   caption = "Cross-Validation Model Comparison"
 )
 ```
-
-The baseline is the reference point. If a model's CV RMSE is comparable to the baseline, it is not learning anything the mean doesn't already capture. The tuned models should improve on the baseline; the ordering between Linear, Lasso, and Random Forest tells us whether the additional flexibility of RF is justified.
-
-Random Forest achieved the lowest grouped CV RMSE of 0.834, outperforming Lasso (0.861), Linear Regression (0.960), and the mean baseline (0.990).
+*Note:* Random Forest achieved the lowest grouped CV RMSE of 0.798, outperforming Lasso (0.861), Linear Regression (0.956), and the mean baseline (0.990). This is telling us that each model is improving upon the baseline since the RMSE is decreasing and that the Random Forest is the best performing model by these metrics, with the smallest MAE of 0.636 and the largest R² of 0.373.
 
 #### Test-set performance
 
 After selecting the best model by CV RMSE and refitting on the full training set, we evaluated once on the held-out test countries.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-test_set_metrics <- read_csv("../output/tables/test_set_metrics.csv", col_names = TRUE)
-test_set_metrics_clean <- test_set_metrics[-1, ]
-test_set_metrics_clean <- test_set_metrics_clean[-c(4:8), ]
-
-kable(test_set_metrics_clean,
+kable(read_csv("../output/tables/test_set_metrics.csv", col_names = TRUE),
       digits = 3,
       col.names = c("Model", "Metric", "Estimate"))
 ```
-
-
-The gap between CV RMSE and test RMSE is a useful diagnostic. A much larger test error suggests overfitting or that the test countries are systematically different from training countries; similar errors suggest stable generalization.
+*Note:* Comparing the RMSE from CV and the test, we see that the test RMSE is is larger but only by 0.38, indicating stable generalization of the model. Furthermore, the test MAE is larger but only by a small gap of 0.57, and the test R² is slightly larger as well, explaining 2.6% more of the test data than the model for the CV data.
 
 ### Predicted vs. Actual
 
-The figures below plot test-set predictions against actual values for each of the three models. Each pair shows the same data twice: on the original medal-count scale (left) and on the log scale used during model training (right). Points along the dashed 45° line indicate accurate predictions; points above the line indicate that actual medal counts were higher than the model predicted, and points below the line indicate the opposite.
-
-#### Random Forest
-
-![](../output/figures/fig17_pred_vs_actual_medals.png)
-Random Forest spreads predictions over the widest range of the three models, from roughly 1 to 45 medals, but still systematically under-predicts the highest-medal countries, actual medal counts of 100+ are predicted at 25–45. This compression at the top is expected for any model trained on a long-tailed target with grouped CV: the held-out test countries include cases that are structurally unlike anything in the training set.
+The figures below plot test-set predictions against actual values for each of the three models. Each pair shows the same data twice: on the original medal-count scale (left) and on the log scale used during model training (right). Points along the dashed 45° line indicate accurate predictions; points above the line indicate that actual medal counts were higher than the model predicted (under-predicted), and points below the line indicate the opposite (over-predicted).
 
 #### Linear Regression 
 
-
 ![](../output/figures/lm_pred_vs_actual_medals.png)
-Linear Regression produces a much narrower spread of predictions, clustered in a tight band around the training-set mean. The model rarely predicts very low or very high medal counts, which is why its CV RMSE is only marginally better than the baseline. The under-prediction of high-medal countries is even more severe than for Random Forest.
+Linear Regression produces a much narrower spread of predictions, clustered in a tight band around the training-set mean. The model rarely predicts very low or very high medal counts, which is why its CV RMSE is only marginally better than the baseline. **The under-prediction of high-medal countries is even more severe than for Random Forest (displayed below Lasso Regression).**
 
 #### Lasso Regression
 
 ![](../output/figures/lasso_pred_vs_actual_medals.png)
-Lasso falls between the two: its predictions span a wider range than Linear Regression but still narrower than Random Forest. The improvement over Linear Regression comes from dropping correlated and uninformative predictors, which stabilizes the remaining coefficients; the gap to Random Forest reflects what regularization alone cannot capture non-linearity and interactions.
+Lasso falls between the two: its predictions span a wider range than Linear Regression but **still narrower than Random Forest**. The improvement over Linear Regression comes from dropping correlated and uninformative predictors, which stabilizes the remaining coefficients. However, this model still lacks capturing non-linearity and interactions.
+
+#### Random Forest
+
+![](../output/figures/fig17_pred_vs_actual_medals.png)
+Random Forest spreads predictions over the widest range of the three models, **from roughly 1 to 45 medals**, but still systematically under-predicts the highest-medal countries; actual medal counts of 100+ are predicted at 25–45. This compression at the top is expected for any model trained on a long-tailed target with grouped CV: the held-out test countries include cases that are structurally unlike anything in the training set.
 
 ### Interpretations
 
 #### Basline (training mean) 
 
-The baseline model predicts the same average medal outcome for every country. It provides a benchmark to determine whether more sophisticated models extract useful signal from the predictors. **Add more**
+The baseline model predicts the same average medal outcome for every country, regardless of its economic or demographic characteristics. It serves as a benchmark for evaluating whether more advanced models are learning meaningful patterns from the data. Its relatively high RMSE shows that countries differ substantially in medal performance, and that using no predictors misses important information. It tends to over-predict low-performing nations and under-predict top-performing nations.
 
 #### Linear Regression
 
-Linear regression assumes a linear relationship between predictors and medal outcomes. It is interpretable and serves as a benchmark parametric model. **Add more**
+Linear Regression assumes that each predictor has a constant additive relationship with medal counts. Its main advantage is interpretability, since coefficients directly show the direction and size of each variable’s estimated effect. For example, for every increase in one unit of a certain predictor, the total predicted medals increases by *X*. However, its performance was only slightly better than the baseline, suggesting that Olympic success is not explained well a linear relationship This model also struggles with multicollinearity among economic indicators, since we have highly correlated predictors in our data that can make coefficient estimates unstable. As a result, it under-predicts countries at the top of the medal distribution and compresses predictions toward the mean.
 
 #### Lasso Regression 
 
-Lasso adds an L1 penalty that shrinks coefficients toward zero, helping reduce overfitting and perform variable selection when predictors are numerous or correlated. **Add more**
+Lasso Regression improves on ordinary Linear Regression by adding an L1 penalty that shrinks less useful coefficients toward zero. This helps reduce overfitting and automatically selects a smaller set of informative predictors from the many correlated indicators. Its smaller RMSE suggests that controlling multicollinearity was important in this dataset. Lasso retained variables such as GDP, age structure, and health expenditure while removing many redundant predictors. However, because it is still a linear model, it cannot fully capture nonlinear relationships or interactions between predictors, which limited its performance compared with Random Forest.
 
 #### Random Forest 
 
-Random Forest is the best-performing model, with a CV RMSE of 0.834, CV R² of 0.306, and test-set RMSE of 0.891. The improvement over Lasso is real but modest, about 3% lower CV RMSE. Two things explain the additional gain. First, RF can use multiple correlated predictors simultaneously: its variable importance plot puts gdp_constant_usd, population_total, and gdp_ppp all in the top four, whereas Lasso had to drop the latter two. Second, RF captures non-linearities and interactions automatically, which matters because the relationship between economic size and medal counts is concave (extra GDP buys more medals at the bottom of the distribution than at the top). The fact that the lift over Lasso is only 3% is itself informative: once multicollinearity is properly handled by regularization, most of the systematic signal in our predictors is roughly linear, and the additional flexibility of a tree ensemble adds only a little.
+Random Forest (with 500 trees) is the best-performing model, with a CV RMSE of 0.798, CV R² of 0.373, and test-set RMSE of 0.836. Random Forest has about a 3% lower CV RMSE than Lasso Regression, and there are two explanations for this improved test metric. 
+
+- First, RF can use multiple correlated predictors simultaneously: its variable importance plot puts `gdp_constant_usd`, `population_total`, and `gdp_ppp` all in the top four, whereas Lasso had to drop the latter two. 
+
+- Second, RF captures non-linearities and interactions automatically, which matters because the relationship between economic size and medal counts is concave (extra GDP buys more medals at the bottom of the distribution than at the top). 
+
+The fact that the improvement over Lasso is only 3% tells us that once multicollinearity is properly handled by regularization, most of the systematic signal in our predictors is roughly linear, and the additional flexibility of a tree ensemble adds only a little.
 
 ### What drives the predictions
 
 #### Random Forest
 
+![](../output/figures/fig19_rf_variable_importance.png)
 The Random Forest importance plot highlights the predictors that contribute most to reducing node impurity across the 500 trees. This is a measure of predictive usefulness; it is not a causal claim.
 
-![](../output/figures/fig19_rf_variable_importance.png)
-
 #### Lasso Regression
-
-For an interpretable comparison we also inspected the non-zero coefficients of the best Lasso model. Predictors with large positive coefficients increase predicted `log(1 + medals)` all else equal; predictors shrunk exactly to zero were judged unnecessary given the others in the model.
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 read_csv("../output/tables/lasso_nonzero_coefficients.csv", show_col_types = FALSE) |>
   select(term, estimate) |>
   arrange(desc(abs(estimate))) |>
   kable(digits = 3,
-        col.names = c("Predictor", "Standardized coefficient"),
+        col.names = c("Predictor", "Standardized Coefficient"),
         caption = "Non-zero coefficients from the best Lasso model")
 ```
-
+For an interpretable comparison, we also inspected the non-zero coefficients of the best Lasso model. Predictors with large positive coefficients increase predicted `log(1 + medals)` all else equal; predictors that shrunk exactly to zero were judged unnecessary given the other predictors in the model.
 
 ### Limitations
 
-Our group-based cross-validation is a deliberately tough test: the model never sees a country during training and must predict it from scratch. A randomly split CV would report better numbers, but would overstate real generalization.
+Our group-based cross-validation is a deliberately tough test as the model predicts the performance of a country it never saw during training. A randomly split CV would report better numbers, but would overstate real generalization.
 
-Several important drivers of Olympic success are not captured in our predictor set. We do not include a host-country flag (host nations historically win more medals), prior-Olympics lagged performance, sport-specific federation funding, or geographic or climate variables (relevant for Winter Games). Adding these would likely improve performance and would be a natural extension.
+Several important drivers of Olympic success are not captured in our predictor set. We do not include a host-country flag (host nations historically win more medals), prior-Olympics lagged performance, sport-specific federation funding, or geographic or climate variables. Adding these would likely improve performance and would be a natural extension of our project.
 
 Missing values are median-imputed inside the pipeline. This is simple and avoids leakage, but it understates uncertainty for countries with poor World Bank coverage. A more rigorous approach would propagate imputation uncertainty or use multiple imputation.
 
-Wikipedia medal tables occasionally disagree with official IOC records for edge cases (mixed teams, reallocated medals after doping decisions, and country-name changes such as the Soviet Union → Russia transition). We normalized a handful of these by hand in Stage 2 but did not exhaustively audit them.
+Wikipedia medal tables occasionally disagree with official IOC records for special cases (mixed teams, reallocated medals after doping decisions, and country-name changes). We normalized a handful of these by hand in Stage 2 but did not exhaustively audit them.
 
 Finally, the target is log-transformed because of right skew, which means large absolute prediction errors in medal counts translate to smaller errors in log space. The model therefore implicitly prioritizes proportional accuracy. Users who care specifically about absolute medal counts for high-performing countries should inspect the back-transformed plot.
 
 ### Challenge
 
-Our challenge was to train and tune **machine learning models that go beyond the linear regression tools covered in class**, using the `tidymodels` framework. Specifically, we built a Random Forest regression model with `ranger`, tuned `mtry` and `min_n` via grouped 5-fold cross-validation, compared it against Linear and Lasso baselines using a shared preprocessing recipe, and extracted variable importances for interpretation.
+Our challenge was to train and tune*machine learning models that go beyond the linear and lasso regression tools covered in class, using the `tidymodels` framework. Specifically, we built a Random Forest regression model with `ranger`, tuned `mtry` and `min_n` via grouped 5-fold cross-validation, compared it against Linear and Lasso baselines using a shared preprocessing recipe, and extracted variable importances for interpretation.
 
 Learning `tidymodels` required us to understand several new concepts: recipes and the role of each step, workflows that bundle models and preprocessing, the separation of `fit_resamples` for plain models from `tune_grid` for models with hyperparameters, and the `last_fit` idiom that guarantees we only touch the test set once. Grouped cross-validation (`group_vfold_cv`) was particularly important: it is the right tool for a country-year panel, and using it made a visible difference in our reported performance compared to naive random CV.
 
 ### Conclusion
 
-We trained and compared three supervised regression models to predict the log of Olympic medal counts from a broad set of World Bank indicators, using a grouped train-test split and grouped cross-validation to honestly measure generalization to new countries. Random Forest achieved the best performance, with a CV RMSE of 0.834 and a test-set RMSE of 0.891 (R² = 0.319), beating the mean-prediction baseline by roughly 16%. Lasso came close behind at 0.861, while plain Linear Regression barely improved on the baseline at 0.960. The most important predictors were country-level economic size (gdp_constant_usd, population_total, gdp_ppp) and demographic structure (age_dependency_old, fertility_rate), broadly consistent with the descriptive patterns we observed in Stage 2: larger and more developed economies tend to win more medals. Two findings stood out as analytically interesting beyond the headline ranking. First, the largest performance jump came from Linear → Lasso rather than Lasso → Random Forest, suggesting that handling multicollinearity in our predictor set mattered more than capturing non-linearity. Second, the test-set RMSE is only modestly larger than the CV RMSE, meaning the model generalizes stably to entirely held-out countries.
+We trained and compared three supervised regression models to predict the log of Olympic medal counts from a broad set of World Bank indicators, using a grouped train-test split and grouped cross-validation to measure generalization to new countries. Random Forest achieved the best performance, with a CV RMSE of 0.798 and a test-set RMSE of 0.836 (R² = 0.397), beating the mean-prediction baseline by roughly 16%. Lasso came close behind at 0.861, while plain Linear Regression barely improved on the baseline at 0.956. The most important predictors were country-level economic size (`gdp_constant_usd`, `population_total`, `gdp_ppp`) and demographic structure (`age_dependency_old`, `fertility_rate`), broadly consistent with the descriptive patterns we observed in Stage 2: larger and more developed economies tend to win more medals. 
+
+Two findings stood out as analytically interesting beyond the headline ranking. 
+
+- First, the largest performance jump came from the adjustment of out model from Linear to Lasso rather than from Lasso to Random Forest, suggesting that handling multicollinearity in our predictor set mattered more than capturing non-linearity. 
+
+- Second, the test-set RMSE is only modestly larger than the CV RMSE, meaning the model generalizes stably to entirely held-out countries.
+
+## References
+
+https://en.wikipedia.org/wiki/Category:Summer_Olympics_medal_tables
+
+https://en.wikipedia.org/wiki/Category:Winter_Olympics_medal_tables
+
+https://data.worldbank.org/
+
+ChatGPT, 13 Feb. version, OpenAI, 16 Feb. 2023, chat.openai.com.
